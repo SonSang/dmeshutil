@@ -1,0 +1,10 @@
+build/
+*.cmake
+CMakeCache.txt
+CMakeFiles/
+*.a
+Makefile
+*.egg-info
+*.so
+output/
+__pycache__/

@@ -1,0 +1,7 @@
+[submodule "external/cgal"]
+	path = external/cgal
+	url = https://github.com/CGAL/cgal.git
+[submodule "external/pybind11"]
+	path = external/pybind11
+	url = ../../pybind/pybind11
+	branch = stable
