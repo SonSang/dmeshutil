@@ -1,6 +1,7 @@
 from dmeshutil.cgalops import DTStruct
 import numpy as np
 import trimesh
+from plyfile import PlyData, PlyElement
 
 class DMesh:
 
@@ -13,24 +14,64 @@ class DMesh:
 
     @staticmethod
     def load(path: str):
-        data = np.load(path)
-        if 'ppos' not in data:
-            raise ValueError("Invalid DMesh file: point position not found")
-        if 'pr' not in data:
-            raise ValueError("Invalid DMesh file: point real not found")
-        if 'pw' not in data:
-            pw = np.zeros_like(data['ppos'][:, 0])  # assume uniform weight
+        if path.endswith(".npz"):
+            data = np.load(path)
+            if 'ppos' not in data:
+                raise ValueError("Invalid DMesh file: point position not found")
+            if 'pr' not in data:
+                raise ValueError("Invalid DMesh file: point real not found")
+            if 'pw' not in data:
+                pw = np.zeros_like(data['ppos'][:, 0])  # assume uniform weight
+            else:
+                pw = data['pw']
+            return DMesh(data["ppos"], pw, data["pr"])
+        elif path.endswith(".ply"):
+            data = PlyData.read(path)
+
+            # ppos
+            ppos_x = data['vertex']['x']
+            ppos_y = data['vertex']['y']
+            ppos_z = data['vertex']['z']
+            ppos = np.stack([ppos_x, ppos_y, ppos_z], axis=1)
+
+            # pw
+            if 'weight' in data['vertex']:
+                pw = data['vertex']['weight']
+            else:
+                pw = np.zeros_like(ppos_x)
+
+            # pr
+            pr = data['vertex']['real']
+            return DMesh(ppos, pw, pr)
         else:
-            pw = data['pw']
-        return DMesh(data["ppos"], pw, data["pr"])
+            raise ValueError("Invalid DMesh file: unknown extension")
     
     def save(self, path: str):
-        data = {
-            "ppos": self.ppos,
-            "pw": self.pw,
-            "pr": self.pr
-        }
-        np.savez(path, data)
+        if path.endswith(".npz"):
+            data = {
+                "ppos": self.ppos,
+                "pw": self.pw,
+                "pr": self.pr
+            }
+            np.savez(path, data)
+        elif path.endswith(".ply"):
+            data = [
+                ('vertex', [
+                    ('x', 'f4'),
+                    ('y', 'f4'),
+                    ('z', 'f4'),
+                    ('real', 'f4'),
+                    ('weight', 'f4')
+                ])
+            ]
+            vertices = []
+            for i in range(len(self.ppos)):
+                vertices.append((self.ppos[i][0], self.ppos[i][1], self.ppos[i][2], self.pr[i], self.pw[i]))
+            vertices = np.array(vertices, dtype=[('x', 'f4'), ('y', 'f4'), ('z', 'f4'), ('real', 'f4'), ('weight', 'f4')])
+            el = PlyElement.describe(vertices, 'vertex')
+            PlyData([el], text=True).write(path)
+        else:
+            raise ValueError("Invalid DMesh file: unknown extension")
 
     def extract_faces(self, force: bool):
         if force or self.faces is None:

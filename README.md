@@ -59,3 +59,9 @@ Following command converts dmesh files in `data` folder to `.obj` files, which w
 ```bash
 python dmesh_obj_converter.py
 ```
+
+### dmesh .npz to .ply
+
+```bash
+python dmesh_ply_converter.py
+```
