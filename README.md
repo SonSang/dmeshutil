@@ -62,6 +62,16 @@ python dmesh_obj_converter.py
 
 ### dmesh .npz to .ply
 
+By converting dmesh files in `npz` format to `ply` format, we can easily see the point cloud of dmesh in softwares like MeshLab.
+
 ```bash
 python dmesh_ply_converter.py
+```
+
+### Render dmesh
+
+We can use `plotly` to render the real (blue) and imaginary (grey) part of dmesh together. 
+
+```bash
+python dmesh_render_plotly.py
 ```

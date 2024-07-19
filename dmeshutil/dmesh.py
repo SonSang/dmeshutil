@@ -1,7 +1,9 @@
 from dmeshutil.cgalops import DTStruct
+from dmeshutil.render import render_mesh3d
 import numpy as np
 import trimesh
 from plyfile import PlyData, PlyElement
+import igl
 
 class DMesh:
 
@@ -10,7 +12,8 @@ class DMesh:
         self.pw = pw
         self.pr = pr
 
-        self.faces = None
+        self.r_faces = None
+        self.i_faces = None
 
     @staticmethod
     def load(path: str):
@@ -74,7 +77,7 @@ class DMesh:
             raise ValueError("Invalid DMesh file: unknown extension")
 
     def extract_faces(self, force: bool):
-        if force or self.faces is None:
+        if force or (self.r_faces is None or self.i_faces is None):
             # compute wdt
             dt = DTStruct.forward(self.ppos, self.pw, True, False)
             tets = dt.tets_point_id
@@ -86,8 +89,24 @@ class DMesh:
             faces = np.unique(faces, axis=0)
             
             face_reals = self.pr[faces].min(axis=1)
-            self.faces = faces[face_reals > 0.5]
+            self.r_faces = faces[face_reals > 0.5]
+            self.i_faces = faces[face_reals <= 0.5]
+
+            # orient real faces
+            self.r_faces, _ = igl.bfs_orient(self.r_faces)
 
     def to_trimesh(self):
         self.extract_faces(False)
         return trimesh.Trimesh(vertices=self.ppos, faces=self.faces)
+    
+    def render_plotly(self, imag_opacity: float, path: str):
+        self.extract_faces(False)
+
+        vertices = [self.ppos, self.ppos]
+        faces = [self.r_faces, self.i_faces]
+        color = ['blue', 'grey']
+        opacity = [1.0, imag_opacity]
+        render_face = [True, True]
+        render_vert = [False, False]
+        
+        render_mesh3d(vertices, faces, color, opacity, render_face, render_vert, path)
